@@ -1,5 +1,5 @@
 """
-Some of code was taken from 
+Some of code was taken from https://pytorch.org/vision/stable/_modules/torchvision/models/resnet.html
 """
 import torch
 from torch import Tensor, nn
@@ -23,19 +23,17 @@ class BasicBlock(nn.Module):
         output_size: int,
         stride: int = 1,
         downsample: Optional[nn.Module] = None,
-        dilation: int = 1,
-        norm_layer: Optional[Callable[..., nn.Module]] = nn.BatchNorm2d
     ):
         super().__init__()
 
         self.conv1 = conv3x3(input_size, output_size, stride)
-        self.bn1 = norm_layer(output_size)
+        self.bn1 = nn.BatchNorm2d(output_size)
         self.relu = nn.ReLU(inplace=True)
         self.conv2 = conv3x3(output_size, output_size)
-        self.bn2 = norm_layer(output_size)
+        self.bn2 = nn.BatchNorm2d(output_size)
         self.downsample = downsample
         self.stride = stride
-    
+
     def forward(self, x: Tensor) -> Tensor:
         identity = x
 
@@ -69,11 +67,12 @@ class CNN(nn.Module):
 
         self.relu = nn.ReLU()
         self.output = output_size
+        self.inplanes = 128
         self.layer0 = nn.Sequential(
-            nn.Conv2d(1, 128, kernel_size=7, stride=2, padding=3),
-            nn.BatchNorm2d(128),
+            nn.Conv2d(1, self.inplanes, kernel_size=7, stride=2, padding=3),
+            nn.BatchNorm2d(self.inplanes),
             nn.ReLU(),
-            nn.MaxPool2d(2, stride=2, padding=1)
+            nn.MaxPool2d(2)
         )
         self.layer1 = self._make_layer(128, layers[0])
         self.layer2 = self._make_layer(256, layers[1])
@@ -81,9 +80,19 @@ class CNN(nn.Module):
         self.layer4 = self._make_layer(512, layers[3])
         self.downsample = conv1x1(512, self.output)
 
-    def _make_layer(self, output: int, blocks_num: int):
-        
-        pass
+    def _make_layer(self, planes: int, blocks: int, stride: int = 1) -> nn.Sequential:
+        downsample = None
+        if stride != 1 or self.inplanes != planes:
+            downsample = nn.Sequential(
+                conv1x1(self.inplanes, planes, stride),
+                nn.BatchNorm2d(planes),
+            )
+        layers = [
+            BasicBlock(self.inplanes, planes, stride, downsample)
+        ]
+        self.inplanes = planes
 
-    def _make_block(self, output: int, stride: int = 2):
-        pass
+        for _ in range(1, blocks):
+            layers.append(BasicBlock(self.inplanes, planes))
+        
+        return layers
