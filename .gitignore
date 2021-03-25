@@ -129,4 +129,5 @@ dmypy.json
 .pyre/
 
 # Course project docs
-Docs/
+data/
+.DS_Store
