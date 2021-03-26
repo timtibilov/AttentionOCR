@@ -1,9 +1,9 @@
 """
 Some of code was taken from https://pytorch.org/vision/stable/_modules/torchvision/models/resnet.html
 """
+
 import torch
 from torch import Tensor, nn
-import torch.nn.functional as F
 from typing import Optional, List
 
 
@@ -64,11 +64,17 @@ class CNN(nn.Module):
     ):
         super().__init__()
 
+        if layers is None:
+            layers = [2, 3, 3]
+        if len(layers) != 3:
+            raise ValueError(
+                f'List of layers should have 3 elements, got {len(layers)}')
+
         self.relu = nn.ReLU()
         self.output = output_size
         self.input_size = 128
         self.layer0 = nn.Sequential(
-            nn.Conv2d(1, self.input_size, kernel_size=7, stride=2, padding=3),
+            nn.Conv2d(1, self.input_size, kernel_size=7, padding=3),
             nn.BatchNorm2d(self.input_size),
             nn.ReLU(),
             nn.MaxPool2d(2)
@@ -76,7 +82,6 @@ class CNN(nn.Module):
         self.layer1 = self._make_layer(128, layers[0])
         self.layer2 = self._make_layer(256, layers[1], stride=2)
         self.layer3 = self._make_layer(512, layers[2], stride=2)
-        self.layer4 = self._make_layer(512, layers[3], stride=2)
         self.downsample = conv1x1(512, self.output)
 
     def _make_layer(self, output_size: int, blocks: int, stride: int = 1) -> nn.Sequential:
@@ -95,11 +100,10 @@ class CNN(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         x = self.layer0(x)
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
-        x = self.layer4(x)
         x = self.downsample(x)
         return x
