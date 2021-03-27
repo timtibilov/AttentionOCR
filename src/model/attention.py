@@ -9,16 +9,16 @@ class BahdanauAttention(nn.Module):
     See https://arxiv.org/pdf/1409.0473.pdf for more information
     """
 
-    def __init__(self, input_size: int, hidden_size: int, n_layers: int):
+    def __init__(self, encoding_size: int, hidden_size: int, n_layers: int):
         super().__init__()
 
-        self.input_size = input_size
+        self.encoding_size = encoding_size
         self.hidden_size = hidden_size
         self.n_layers = n_layers
 
         self.downsample = nn.Linear(n_layers, 1)
         self.hidden_fc = nn.Linear(hidden_size, hidden_size)
-        self.features_fc = nn.Linear(input_size, hidden_size)
+        self.features_fc = nn.Linear(encoding_size, hidden_size)
         self.scorer = nn.Linear(hidden_size, 1)
 
     def downsample_hiddens(self, hidden_state: Tensor) -> Tensor:
@@ -46,6 +46,6 @@ class BahdanauAttention(nn.Module):
             self.features_fc(features) + self.hidden_fc(hidden_state)))
 
         weights = F.softmax(scores, dim=0)
-        # (1, 1, input_size)
+        # (1, 1, encoding_size)
         decoder_input = torch.sum(features * weights, dim=0).unsqueeze(0)
         return decoder_input

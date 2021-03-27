@@ -1,5 +1,5 @@
 """
-Implementation of BERT's transformer block
+Implementation of BERT's transformer.
 See https://arxiv.org/pdf/1706.03762.pdf for more information
 """
 
@@ -37,8 +37,8 @@ class PositionwiseFeedForward(nn.Module):
 
 class SublayerConnection(nn.Module):
     """
-    A residual connection followed by a layer norm.
-    Note for code simplicity the norm is first as opposed to last.
+    A residual connection followed by a layer norm
+    Note: for code simplicity the norm is first as opposed to last
     """
 
     def __init__(self, size: int, dropout: float):
@@ -83,10 +83,10 @@ class Attention(nn.Module):
 
 class MultiHeadedAttention(nn.Module):
     """
-    Take in model size and number of heads.
+    Take in model size and number of heads
     """
 
-    def __init__(self, h, d_model, dropout=0.1):
+    def __init__(self, h: int, d_model: int, dropout: float = 0.1):
         super().__init__()
         assert d_model % h == 0
 
@@ -125,15 +125,17 @@ class TransformerBlock(nn.Module):
     Transformer = MultiHead Attention + Feed Forward with sublayer connection
     """
 
-    def __init__(self, hidden: int, attn_heads: int, feed_forward_hidden: int, dropout: float):
+    def __init__(self, hidden: int, attn_heads: int, feed_forward_hidden: int, dropout: float = 0.):
         """
-        :param hidden: hidden size of transformer
-        :param attn_heads: head sizes of multi-head attention
-        :param feed_forward_hidden: feed_forward_hidden, usually 4*hidden_size
-        :param dropout: dropout rate
+        Parameters:
+        hidden:              hidden size of transformer
+        attn_heads:          head sizes of multi-head attention
+        feed_forward_hidden: feed_forward_hidden, usually 4*hidden_size
+        dropout:             dropout rate
         """
 
         super().__init__()
+
         self.attention = MultiHeadedAttention(
             h=attn_heads, d_model=hidden, dropout=dropout)
         self.feed_forward = PositionwiseFeedForward(
