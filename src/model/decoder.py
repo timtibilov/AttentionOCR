@@ -1,4 +1,5 @@
 import torch
+from typing import Tuple
 from torch import nn, Tensor
 from torch.nn import functional as F
 from .attention import BahdanauAttention
@@ -30,13 +31,37 @@ class Decoder(nn.Module):
             encoding_size, hidden_size, n_layers)
         self.gru = nn.GRU(encoding_size, hidden_size,
                           num_layers=n_layers, dropout=dropout)
-        self.fc = nn.Linear(encoding_size + hidden_size, hidden_size)
-        self.decoder = nn.Linear(hidden_size)
+        self.output_fc = nn.Linear(encoding_size + hidden_size, hidden_size)
+        self.decode_fc = nn.Linear(hidden_size, vocab_size)
         self.SOS = nn.Parameter(torch.rand(
             (n_layers, 1, encoding_size)), requires_grad=True)
         self.h0 = nn.Parameter(torch.randn(
             (n_layers, 1, hidden_size)), requires_grad=True)
         self.dropout = nn.Dropout(p=dropout)
 
-    def forward(self, prev_hidden: Tensor, encoded_seq: Tensor, prev_output: Tensor) -> Tensor:
-        pass
+    def forward(
+        self,
+        prev_hidden: Tensor,
+        encoded_seq: Tensor,
+        prev_output: Tensor
+    ) -> Tuple[Tensor, Tensor, Tensor]:
+
+        output, hidden = self.gru(prev_output, prev_hidden)
+        context = self.attention(hidden, encoded_seq)
+        output = F.tanh(self.output_fc(torch.cat((context, output), dim=-1)))
+        logits = self.decode_fc(self.dropout(output))
+
+        return logits.squeeze(), output, hidden
+
+    def another_forward(
+        self,
+        prev_hidden: Tensor,
+        encoded_seq: Tensor,
+    ) -> Tuple[Tensor, Tensor, Tensor]:
+
+        context = self.attention(prev_hidden, encoded_seq)
+        output, hidden = self.gru(context, prev_hidden)
+        output = F.tanh(self.output_fc(torch.cat((context, output), dim=-1)))
+        logits = self.decode_fc(self.dropout(output))
+
+        return logits, hidden

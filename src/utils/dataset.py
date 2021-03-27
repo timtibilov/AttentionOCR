@@ -4,6 +4,7 @@ import torch
 import numpy as np
 import pandas as pd
 from PIL import Image
+from typing import Tuple, Dict
 from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import Resize, Normalize, ToTensor, Compose
 
@@ -44,16 +45,16 @@ class TrainTestDataset(Dataset):
     def __len__(self):
         return self.data.shape[0]
 
-    def __getitem__(self, index):
+    def __getitem__(self, index) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         # Getting data
         item = self.data.iloc[index]
-        formula = self.formulas.iloc[item.idx]
+        formula = self.formulas.iloc[item.idx].values[0]
         im_path = os.path.join(self.image_dir, item.image)
         image = Image.open(im_path).convert('L')
         seq_len = len(formula)
 
         # Downsampling and transforming image
-        image = self._downsample_image(image)
+        # image = self._downsample_image(image)
         if self.transform:
             image = self.transform(image)
 
@@ -67,7 +68,7 @@ class TrainTestDataset(Dataset):
         Returns torch.tensor of size (formula_len, vocab_len)
         """
         def encode(token):
-            return self.vocab(token, self.vocab['UNKNOWN'])
+            return self.vocab.get(token, self.vocab['UNKNOWN'])
         sequence = torch.zeros(len(formula), len(self.vocab))
         tokens_idx = list(map(encode, formula))
         sequence[np.arange(len(formula)), tokens_idx] = 1.0
@@ -93,7 +94,7 @@ def collate(batch, device):
     tokens = [torch.cat((t, torch.zeros(max_len - t.shape[0], t.shape[1])))
               for t in tokens]
     batch = {
-        'images': torch.tensor(images).to(device),
+        'img': torch.tensor(images).to(device),
         'tokens': torch.tensor(tokens).to(device),
         'len': seq_len
     }
@@ -107,16 +108,16 @@ def get_dataloader(
     formulas_path: str,
     vocab_path: str,
     device: str,
-    shuffle: bool
-) -> DataLoader:
+) -> Tuple[DataLoader, Dict[str, int]]:
 
-    transformer = Compose(
+    transformer = Compose([
         Resize((1024, 1024)),
         ToTensor(),
         Normalize((0.5), (1))
-    )
+    ])
 
-    dataset = TrainTestDataset(data_path, image_dir, formulas_path, vocab_path)
-    dataloader = DataLoader(dataset, batch_size=8, shuffle=shuffle,
-                            collate_fn=lambda x: collate(x, device))
-    return dataloader
+    dataset = TrainTestDataset(
+        data_path, image_dir, formulas_path, vocab_path, transformer)
+    dataloader = DataLoader(dataset, batch_size=1,)
+    # collate_fn=lambda x: collate(x, device))
+    return dataloader, dataset.vocab
