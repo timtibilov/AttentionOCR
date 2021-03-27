@@ -105,5 +105,6 @@ class CNN(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
+        # (batch_size, output_channels, height, width)
         x = self.downsample(x)
-        return x
+        return x.squeeze(0)  # (output_channels, height, width)

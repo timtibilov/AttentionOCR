@@ -1,14 +1,16 @@
-from torch import nn as nn
-
-import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
-import torch
+"""
+Implementation of BERT's transformer block
+See https://arxiv.org/pdf/1706.03762.pdf for more information
+"""
 
 import math
+import torch
+import numpy as np
+from torch import nn, Tensor
+import torch.nn.functional as F
 
 
-def get_mask(shape):
+def get_mask(shape: int) -> Tensor:
     attn_shape = (shape, shape)
     ones_massive = np.ones(attn_shape)
     # - np.tril(ones_massive,-appropriate_len)
@@ -20,9 +22,9 @@ def get_mask(shape):
 
 
 class PositionwiseFeedForward(nn.Module):
-    """Implements FFN equation."""
+    """ Implements FFN equation """
 
-    def __init__(self, d_model, d_ff, dropout=0.1):
+    def __init__(self, d_model: int, d_ff: int, dropout: float = 0.1):
         super(PositionwiseFeedForward, self).__init__()
         self.w_1 = nn.Linear(d_model, d_ff)
         self.w_2 = nn.Linear(d_ff, d_model)
@@ -39,23 +41,30 @@ class SublayerConnection(nn.Module):
     Note for code simplicity the norm is first as opposed to last.
     """
 
-    def __init__(self, size, dropout):
+    def __init__(self, size: int, dropout: float):
         super(SublayerConnection, self).__init__()
         self.norm = nn.BatchNorm1d(size)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x, sublayer):
-        "Apply residual connection to any sublayer with the same size."
+    def forward(self, x: Tensor, sublayer: nn.Module) -> Tensor:
+        """ Apply residual connection to any sublayer with the same size """
         return x + self.dropout(sublayer(self.norm(x)))
         # return x + self.dropout(sublayer(x))
 
 
 class Attention(nn.Module):
     """
-    Compute 'Scaled Dot Product Attention
+    Compute scaled dot product Attention
     """
 
-    def forward(self, query, key, value, mask=None, dropout=None):
+    def forward(
+        self,
+        query: Tensor,
+        key: Tensor,
+        value: Tensor,
+        mask: Tensor = None,
+        dropout: int = None
+    ) -> Tensor:
 
         # print(query.shape,key.shape)
         scores = torch.matmul(query, key.transpose(-2, -1))
@@ -92,7 +101,7 @@ class MultiHeadedAttention(nn.Module):
 
         self.dropout = nn.Dropout(p=dropout)
 
-    def forward(self, query, key, value, mask=None):
+    def forward(self, query: Tensor, key: Tensor, value: Tensor, mask: Tensor = None) -> Tensor:
         batch_size = query.size(0)
 
         # 1) Do all the linear projections in batch from d_model => h x d_k
@@ -113,10 +122,10 @@ class MultiHeadedAttention(nn.Module):
 class TransformerBlock(nn.Module):
     """
     Bidirectional Encoder = Transformer (self-attention)
-    Transformer = MultiHead_Attention + Feed_Forward with sublayer connection
+    Transformer = MultiHead Attention + Feed Forward with sublayer connection
     """
 
-    def __init__(self, hidden, attn_heads, feed_forward_hidden, dropout):
+    def __init__(self, hidden: int, attn_heads: int, feed_forward_hidden: int, dropout: float):
         """
         :param hidden: hidden size of transformer
         :param attn_heads: head sizes of multi-head attention
@@ -133,7 +142,7 @@ class TransformerBlock(nn.Module):
         self.output_sublayer = SublayerConnection(size=hidden, dropout=dropout)
         self.dropout = nn.Dropout(p=dropout)
 
-    def forward(self, x, mask):
+    def forward(self, x: Tensor, mask: Tensor) -> Tensor:
         x = self.input_sublayer(
             x, lambda _x: self.attention.forward(_x, _x, _x, mask=mask))
         x = self.output_sublayer(x, self.feed_forward)
