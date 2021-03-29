@@ -6,7 +6,7 @@ import pandas as pd
 from PIL import Image
 from typing import Tuple, Dict
 from torch.utils.data import Dataset, DataLoader
-from torchvision.transforms import Resize, Normalize, ToTensor, Compose
+from torchvision.transforms import Normalize, ToTensor, Compose
 
 
 class TrainTestDataset(Dataset):
@@ -39,6 +39,7 @@ class TrainTestDataset(Dataset):
         with open(vocab_path, 'r') as f:
             strs = f.readlines()
         self.vocab = {s.strip(): i for i, s in enumerate(strs)}
+        self.vocab_size = len(self.vocab)
         self.image_dir = image_dir
         self.transform = transform
 
@@ -59,8 +60,12 @@ class TrainTestDataset(Dataset):
             image = self.transform(image)
 
         tokens = self._encode_tokens(formula)
-
-        return image, tokens, seq_len
+        item = {
+            'img': image,
+            'tokens': tokens,
+            'len': seq_len
+        }
+        return item
 
     def _encode_tokens(self, formula: list):
         """
@@ -111,13 +116,11 @@ def get_dataloader(
 ) -> Tuple[DataLoader, Dict[str, int]]:
 
     transformer = Compose([
-        Resize((1024, 1024)),
         ToTensor(),
         Normalize((0.5), (1))
     ])
 
     dataset = TrainTestDataset(
         data_path, image_dir, formulas_path, vocab_path, transformer)
-    dataloader = DataLoader(dataset, batch_size=1,)
-    # collate_fn=lambda x: collate(x, device))
+    dataloader = DataLoader(dataset, batch_size=1)
     return dataloader, dataset.vocab

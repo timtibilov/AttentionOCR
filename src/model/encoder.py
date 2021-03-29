@@ -1,7 +1,7 @@
 import torch
 from .cnn import CNN
-from typing import List
 from torch import nn, Tensor
+from typing import List, Tuple
 from torch.nn import functional as F
 
 
@@ -25,7 +25,7 @@ class Encoder(nn.Module):
         self.cnn = CNN(layers, hidden_size)
         self.gru = nn.GRU(hidden_size, hidden_size, bidirectional=True)
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
         """
         Parameters:
         x: image with shape (1, channels, height, width)
@@ -36,7 +36,7 @@ class Encoder(nn.Module):
         x = self.cnn(x)
         # (width, height, channels)
         x = x.permute(2, 1, 0)
-        x, _ = self.gru(x)
+        x, hidden = self.gru(x)
         # (height, width, hidden_size * 2)
         x = x.permute(1, 0, 2)
         x = x.contiguous().view(x.shape[0] * x.shape[1], 1, self.encoding_size)

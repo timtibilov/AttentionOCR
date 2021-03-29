@@ -20,11 +20,10 @@ class AttentionOCR(nn.Module):
         self.to(device)
 
     def forward(self, x: Dict[str, Union[Tensor, int]]) -> Tensor:
-        hidden = decoder.h0
-        output = decoder.SOS
-        tokens = []
+        hidden = self.decoder.h0
+        seq = self.encoder(x['img'])
+        tokens = torch.Tensor()
         for t in range(x['len']):
-            seq = self.encoder(x['img'])
-            logits, output, hidden = self.decoder(hidden, seq, output)
-            tokens.append(F.softmax(logits))
-        return torch.Tensor(tokens)
+            logits, hidden = self.decoder(hidden, seq)
+            tokens = torch.cat((tokens, F.softmax(logits, dim=-1)), dim=0)
+        return tokens

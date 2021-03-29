@@ -42,7 +42,7 @@ class BahdanauAttention(nn.Module):
             hidden_state = self.downsample_hiddens(hidden_state)
 
         # (seq_len, 1, 1)
-        scores = self.scorer(F.tanh(
+        scores = self.scorer(torch.tanh(
             self.features_fc(features) + self.hidden_fc(hidden_state)))
 
         weights = F.softmax(scores, dim=0)
