@@ -28,19 +28,23 @@ class TrainTestDataset(Dataset):
         self.formulas = pd.DataFrame(data)
 
         # Loading data (image and formula index)
+        self.image_dir = image_dir
         with open(data_path, 'r') as f:
             strs = f.readlines()
         strs = [s.split() for s in strs]
         data = np.array(list(zip(*strs))).T
         self.data = pd.DataFrame(data, columns=['image', 'idx'])
+
+        # self.data = self.data[:5]
+
         self.data['idx'] = self.data['idx'].astype(int)
+        self.data['image'] = self.data.image.apply(self._load_image)
 
         # Loading LaTeX vocabulary
         with open(vocab_path, 'r') as f:
             strs = f.readlines()
         self.vocab = {s.strip(): i for i, s in enumerate(strs)}
         self.vocab_size = len(self.vocab)
-        self.image_dir = image_dir
         self.transform = transform
 
     def __len__(self):
@@ -50,14 +54,16 @@ class TrainTestDataset(Dataset):
         # Getting data
         item = self.data.iloc[index]
         formula = self.formulas.iloc[item.idx].values[0]
-        im_path = os.path.join(self.image_dir, item.image)
-        image = Image.open(im_path).convert('L')
-        seq_len = len(formula)
+        image = item.image
+        seq_len = len(formula) + 1
 
-        # Downsampling and transforming image
-        # image = self._downsample_image(image)
+        # Upsampling and transforming image
+        image = self._upsample_image(image)
         if self.transform:
             image = self.transform(image)
+
+        # Removing background from image
+        image[image > 0.77] = 1.
 
         tokens = self._encode_tokens(formula)
         item = {
@@ -67,6 +73,11 @@ class TrainTestDataset(Dataset):
         }
         return item
 
+    def _load_image(self, img: str) -> Image.Image:
+        """ Returns PIL.Image with 'L' convertation mode """
+        im_path = os.path.join(self.image_dir, img)
+        return Image.open(im_path).convert('L')
+
     def _encode_tokens(self, formula: list):
         """
         Encode sequence of tokens in formula.
@@ -74,20 +85,20 @@ class TrainTestDataset(Dataset):
         """
         def encode(token):
             return self.vocab.get(token, self.vocab['UNKNOWN'])
-        sequence = torch.zeros(len(formula), len(self.vocab))
-        tokens_idx = list(map(encode, formula))
-        sequence[np.arange(len(formula)), tokens_idx] = 1.0
+        # sequence = torch.zeros(len(formula), len(self.vocab))
+        tokens_idx = torch.Tensor(list(map(encode, formula)) + [0]).long()
+        # sequence[np.arange(len(formula)), tokens_idx] = 1.0
 
-        return sequence
+        return tokens_idx  # sequence
 
-    def _downsample_image(self, image: Image.Image) -> Image.Image:
+    def _upsample_image(self, image: Image.Image) -> Image.Image:
         """
-        Downsample given image by random ratio in interval [1, 1.5].
-        Returns downsampled image
+        Upsample given image by random ratio in interval [1, 1.5].
+        Used for case of different screen sizes. Returns upsampled image
         """
-        ratio = (np.random.randn() / 2) + 1
+        ratio = (np.random.rand() / 2) + 1
         old_size = image.size
-        new_size = (int(old_size[0] / ratio), int(old_size[1] / ratio))
+        new_size = (int(old_size[0] * ratio), int(old_size[1] * ratio))
         image = image.resize(new_size, PIL.Image.LANCZOS)
 
         return image
@@ -117,7 +128,7 @@ def get_dataloader(
 
     transformer = Compose([
         ToTensor(),
-        Normalize((0.5), (1))
+        Normalize((0), (1))
     ])
 
     dataset = TrainTestDataset(
