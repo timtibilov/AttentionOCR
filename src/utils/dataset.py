@@ -4,8 +4,9 @@ import torch
 import numpy as np
 import pandas as pd
 from PIL import Image
+from typing import Tuple, Dict
 from torch.utils.data import Dataset, DataLoader
-from torchvision.transforms import Resize, Normalize, ToTensor, Compose
+from torchvision.transforms import Normalize, ToTensor, Compose
 
 
 class TrainTestDataset(Dataset):
@@ -27,39 +28,55 @@ class TrainTestDataset(Dataset):
         self.formulas = pd.DataFrame(data)
 
         # Loading data (image and formula index)
+        self.image_dir = image_dir
         with open(data_path, 'r') as f:
             strs = f.readlines()
         strs = [s.split() for s in strs]
         data = np.array(list(zip(*strs))).T
         self.data = pd.DataFrame(data, columns=['image', 'idx'])
+
+        # self.data = self.data[:5]
+
         self.data['idx'] = self.data['idx'].astype(int)
+        self.data['image'] = self.data.image.apply(self._load_image)
 
         # Loading LaTeX vocabulary
         with open(vocab_path, 'r') as f:
             strs = f.readlines()
         self.vocab = {s.strip(): i for i, s in enumerate(strs)}
-        self.image_dir = image_dir
+        self.vocab_size = len(self.vocab)
         self.transform = transform
 
     def __len__(self):
         return self.data.shape[0]
 
-    def __getitem__(self, index):
+    def __getitem__(self, index) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         # Getting data
         item = self.data.iloc[index]
-        formula = self.formulas.iloc[item.idx]
-        im_path = os.path.join(self.image_dir, item.image)
-        image = Image.open(im_path).convert('L')
-        seq_len = len(formula)
+        formula = self.formulas.iloc[item.idx].values[0]
+        image = item.image
+        seq_len = len(formula) + 1
 
-        # Downsampling and transforming image
-        image = self._downsample_image(image)
+        # Upsampling and transforming image
+        image = self._upsample_image(image)
         if self.transform:
             image = self.transform(image)
 
-        tokens = self._encode_tokens(formula)
+        # Removing background from image
+        image[image > 0.77] = 1.
 
-        return image, tokens, seq_len
+        tokens = self._encode_tokens(formula)
+        item = {
+            'img': image,
+            'tokens': tokens,
+            'len': seq_len
+        }
+        return item
+
+    def _load_image(self, img: str) -> Image.Image:
+        """ Returns PIL.Image with 'L' convertation mode """
+        im_path = os.path.join(self.image_dir, img)
+        return Image.open(im_path).convert('L')
 
     def _encode_tokens(self, formula: list):
         """
@@ -67,21 +84,21 @@ class TrainTestDataset(Dataset):
         Returns torch.tensor of size (formula_len, vocab_len)
         """
         def encode(token):
-            return self.vocab(token, self.vocab['UNKNOWN'])
-        sequence = torch.zeros(len(formula), len(self.vocab))
-        tokens_idx = list(map(encode, formula))
-        sequence[np.arange(len(formula)), tokens_idx] = 1.0
+            return self.vocab.get(token, self.vocab['UNKNOWN'])
+        # sequence = torch.zeros(len(formula), len(self.vocab))
+        tokens_idx = torch.Tensor(list(map(encode, formula)) + [0]).long()
+        # sequence[np.arange(len(formula)), tokens_idx] = 1.0
 
-        return sequence
+        return tokens_idx  # sequence
 
-    def _downsample_image(self, image: Image.Image) -> Image.Image:
+    def _upsample_image(self, image: Image.Image) -> Image.Image:
         """
-        Downsample given image by random ratio in interval [1, 1.5].
-        Returns downsampled image
+        Upsample given image by random ratio in interval [1, 1.5].
+        Used for case of different screen sizes. Returns upsampled image
         """
-        ratio = (np.random.randn() / 2) + 1
+        ratio = (np.random.rand() / 2) + 1
         old_size = image.size
-        new_size = (int(old_size[0] / ratio), int(old_size[1] / ratio))
+        new_size = (int(old_size[0] * ratio), int(old_size[1] * ratio))
         image = image.resize(new_size, PIL.Image.LANCZOS)
 
         return image
@@ -93,7 +110,7 @@ def collate(batch, device):
     tokens = [torch.cat((t, torch.zeros(max_len - t.shape[0], t.shape[1])))
               for t in tokens]
     batch = {
-        'images': torch.tensor(images).to(device),
+        'img': torch.tensor(images).to(device),
         'tokens': torch.tensor(tokens).to(device),
         'len': seq_len
     }
@@ -107,16 +124,14 @@ def get_dataloader(
     formulas_path: str,
     vocab_path: str,
     device: str,
-    shuffle: bool
-) -> DataLoader:
+) -> Tuple[DataLoader, Dict[str, int]]:
 
-    transformer = Compose(
-        Resize((1024, 1024)),
+    transformer = Compose([
         ToTensor(),
-        Normalize((0.5), (1))
-    )
+        Normalize((0), (1))
+    ])
 
-    dataset = TrainTestDataset(data_path, image_dir, formulas_path, vocab_path)
-    dataloader = DataLoader(dataset, batch_size=8, shuffle=shuffle,
-                            collate_fn=lambda x: collate(x, device))
-    return dataloader
+    dataset = TrainTestDataset(
+        data_path, image_dir, formulas_path, vocab_path, transformer)
+    dataloader = DataLoader(dataset, batch_size=1)
+    return dataloader, dataset.vocab

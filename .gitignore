@@ -130,4 +130,5 @@ dmypy.json
 
 # Course project docs
 data/
+Docs/
 .DS_Store
