@@ -65,7 +65,7 @@ class CNN(nn.Module):
         super().__init__()
 
         if layers is None:
-            layers = [2, 3, 3]
+            layers = [2, 3, 2]
         if len(layers) != 3:
             raise ValueError(
                 f'List of layers should have 3 elements, got {len(layers)}')

@@ -28,3 +28,10 @@ class AttentionOCR(nn.Module):
             logits, hidden = self.decoder(hidden, seq)
             tokens = torch.cat((tokens, self.softmax(logits)), dim=0)
         return tokens
+
+    def save(self, path: str):
+        torch.save(self.state_dict(), path)
+
+    def load(self, path: str):
+        self.load_state_dict(torch.load(
+            path, map_location=torch.device('cpu')))
