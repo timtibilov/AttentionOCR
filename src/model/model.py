@@ -13,7 +13,7 @@ class AttentionOCR(nn.Module):
         super().__init__()
 
         self.device = device
-        self.encoder = Encoder([2, 3, 3])
+        self.encoder = Encoder([2, 2, 2])
         self.decoder = Decoder(vocab_size, self.encoder.encoding_size,
                                self.encoder.encoding_size, n_layers=2, dropout=0.2)
         self.vocab_size = vocab_size
@@ -23,7 +23,7 @@ class AttentionOCR(nn.Module):
     def forward(self, x: Dict[str, Tensor]) -> Tensor:
         hidden = self.decoder.h0
         seq = self.encoder(x['img'])
-        tokens = torch.Tensor()
+        tokens = torch.Tensor().to(self.device)
         for t in range(x['len']):
             logits, hidden = self.decoder(hidden, seq)
             tokens = torch.cat((tokens, self.softmax(logits)), dim=0)

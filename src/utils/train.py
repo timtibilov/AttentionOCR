@@ -1,11 +1,15 @@
 import os
+import sys
 import torch
+import argparse
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 from loguru import logger
 from torch import Tensor, nn
 from torch.optim import Adam
 from datetime import datetime as dt
+sys.path.insert(0, f'{os.path.join(os.path.dirname(__file__), "../")}')
 from model.model import AttentionOCR
 from torch.utils.data import DataLoader
 from utils.dataset import get_dataloader
@@ -22,7 +26,7 @@ def train_epoch(dl: DataLoader, model: nn.Module, optim, device: str) -> float:
     losses = []
     for b in batches:
         for k in b:
-            b[k].to(device)
+            b[k] = b[k].to(device, dtype=torch.float16)
         optim.zero_grad()
         pred = model(b)
         curr_loss = loss(pred, b['tokens'].squeeze())
@@ -44,7 +48,7 @@ def validate_epoch(dl: DataLoader, model: nn.Module, device: str) -> Dict[str, f
 
     for b in batches:
         for k in b:
-            b[k].to(device)
+            b[k] = b[k].to(device)
         pred = model(b)
         curr_loss = loss(pred, b['tokens'].squeeze()).cpu().item()
 
@@ -56,7 +60,7 @@ def validate_epoch(dl: DataLoader, model: nn.Module, device: str) -> Dict[str, f
         bleu_scores.append(bleu)
 
         batches.set_description(
-            f'Test epoch. Current CCE Loss: {losses[-1]}. Current BLEU: {bleu_scores[-1]}. ')
+            f'Validation epoch. Current CCE Loss: {losses[-1]}. Current BLEU: {bleu_scores[-1]}. ')
 
     metrics = {
         'bleu': np.mean(bleu_scores),
@@ -66,9 +70,9 @@ def validate_epoch(dl: DataLoader, model: nn.Module, device: str) -> Dict[str, f
     return metrics
 
 
-def fit(
+def fit_model(
     train_path: str,
-    test_path: str,
+    eval_path: str,
     image_dir: str,
     formulas_path: str,
     vocab_path: str,
@@ -76,14 +80,15 @@ def fit(
     n_epochs: int = 12,
     lr: float = 1e-4,
     save_dir: Optional[str] = None
-) -> nn.Module:
+) -> pd.DataFrame:
 
     log_file = ''.join(
         ['train_', dt.now().strftime('%Y-%m-%dT%H:%M:%S'), '.log'])
     log_path = os.path.join('./', 'logs', log_file)
     if save_dir is None:
         save_dir = os.path.join('./', 'params/')
-    os.makedirs(save_dir)
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
 
     logger.add(log_path)
 
@@ -94,7 +99,7 @@ def fit(
                                      vocab_path=vocab_path,
                                      device=device)
     logger.info('Loading validation dataset')
-    eval_dl, _ = get_dataloader(data_path=test_path,
+    eval_dl, _ = get_dataloader(data_path=eval_path,
                                 image_dir=image_dir,
                                 formulas_path=formulas_path,
                                 vocab_path=vocab_path,
@@ -122,6 +127,53 @@ def fit(
         model.save(model_path)
         logger.info(f'Model saved at {model_path}')
 
+    logger.info(f'End fitting on {n_epochs}')
+    return pd.DataFrame(metrics)
+
 
 def test_model():  # TODO: realize validation method
     pass
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--device', type=str, default='cpu')
+    parser.add_argument('--epochs', type=int, default=12)
+    parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--train_path', type=str,
+                        default='./data/train_filter.lst')
+    parser.add_argument('--val_path', type=str,
+                        default='./data/validate_filter.lst')
+    parser.add_argument('--image_dir', type=str,
+                        default='./data/image_processed/')
+    parser.add_argument('--formulas_path', type=str,
+                        default='./data/formulas_tokenized.lst')
+    parser.add_argument('--vocab_path', type=str,
+                        default='./data/latex_vocab.txt')
+    parser.add_argument('--save', type=str, default=None)
+    parser.add_argument('--norm', dest='norm', action='store_true')
+    parser.add_argument('--no-norm', dest='norm', action='store_false')
+    parser.set_defaults(norm=False)
+
+    return parser.parse_args()
+
+
+if __name__ == '__main__':
+    args = parse_args()
+    if args.norm:
+        args.formulas_path = args.formulas_path + '.norm'
+        args.vocab_path = args.vocab_path + '.norm'
+
+    metrics = fit_model(
+        args.train_path,
+        args.val_path,
+        args.image_dir,
+        args.formulas_path,
+        args.vocab_path,
+        args.device,
+        args.epochs,
+        args.lr,
+        args.save
+    )
+    logger.info(metrics)
+    metrics.to_csv('train_metrics.csv')
