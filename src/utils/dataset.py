@@ -38,6 +38,8 @@ class TrainTestDataset(Dataset):
         self.data.drop(
             self.data[self.data.image.apply(self._check_exists)].index, inplace=True)
 
+        self.data = self.data.iloc[:5000]
+
         self.data['idx'] = self.data['idx'].astype(int)
         self.data['image'] = self.data.image.apply(self._load_image)
 

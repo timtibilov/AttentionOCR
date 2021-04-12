@@ -130,5 +130,7 @@ dmypy.json
 
 # Course project docs
 *data/
+logs/
 Docs/
 .DS_Store
+*metrics.csv

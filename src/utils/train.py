@@ -26,7 +26,7 @@ def train_epoch(dl: DataLoader, model: nn.Module, optim, device: str) -> float:
     losses = []
     for b in batches:
         for k in b:
-            b[k] = b[k].to(device, dtype=torch.float16)
+            b[k] = b[k].to(device)
         optim.zero_grad()
         pred = model(b)
         curr_loss = loss(pred, b['tokens'].squeeze())
@@ -96,14 +96,12 @@ def fit_model(
     train_dl, vocab = get_dataloader(data_path=train_path,
                                      image_dir=image_dir,
                                      formulas_path=formulas_path,
-                                     vocab_path=vocab_path,
-                                     device=device)
+                                     vocab_path=vocab_path)
     logger.info('Loading validation dataset')
     eval_dl, _ = get_dataloader(data_path=eval_path,
                                 image_dir=image_dir,
                                 formulas_path=formulas_path,
-                                vocab_path=vocab_path,
-                                device=device)
+                                vocab_path=vocab_path)
     logger.info('Loading model')
     model = AttentionOCR(len(vocab), device)
     optim = torch.optim.Adam(model.parameters(), lr=lr)
@@ -127,7 +125,7 @@ def fit_model(
         model.save(model_path)
         logger.info(f'Model saved at {model_path}')
 
-    logger.info(f'End fitting on {n_epochs}')
+    logger.info(f'End fitting on {n_epochs} epochs')
     return pd.DataFrame(metrics)
 
 
@@ -145,7 +143,7 @@ def parse_args():
     parser.add_argument('--val_path', type=str,
                         default='./data/validate_filter.lst')
     parser.add_argument('--image_dir', type=str,
-                        default='./data/image_processed/')
+                        default='./data/images_processed/')
     parser.add_argument('--formulas_path', type=str,
                         default='./data/formulas_tokenized.lst')
     parser.add_argument('--vocab_path', type=str,
