@@ -39,7 +39,7 @@ def train_epoch(dl: DataLoader, model: nn.Module, optim, device: str) -> float:
             f'Train epoch. Current CCE Loss: {losses[-1]}. ')
     return np.mean(losses)
 
-
+@torch.no_grad()
 def validate_epoch(dl: DataLoader, model: nn.Module, device: str) -> Dict[str, float]:
     model.eval()
     batches = tqdm(dl)
