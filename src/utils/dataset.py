@@ -6,7 +6,7 @@ import pandas as pd
 from PIL import Image
 from typing import Tuple, Dict
 from torch.utils.data import Dataset, DataLoader
-# from torchvision.transforms import Normalize, ToTensor, Compose
+from torchvision.transforms import Normalize, ToTensor, Compose
 
 
 class TrainTestDataset(Dataset):
@@ -37,8 +37,6 @@ class TrainTestDataset(Dataset):
 
         self.data.drop(
             self.data[self.data.image.apply(self._check_exists)].index, inplace=True)
-
-        # self.data = self.data.iloc[:5000]
 
         self.data['idx'] = self.data['idx'].astype(int)
         self.data['image'] = self.data.image.apply(self._load_image)
@@ -95,12 +93,11 @@ class TrainTestDataset(Dataset):
         """
         def encode(token):
             return self.vocab.get(token, self.vocab['UNKNOWN'])
-        # sequence = torch.zeros(len(formula), len(self.vocab))
+
         tokens_idx = torch.Tensor(
             list(map(encode, formula)) + [self.vocab['EOF']]).long()
-        # sequence[np.arange(len(formula)), tokens_idx] = 1.0
 
-        return tokens_idx  # sequence
+        return tokens_idx
 
     def _upsample_image(self, image: Image.Image) -> Image.Image:
         """
@@ -136,11 +133,10 @@ def get_dataloader(
     vocab_path: str,
 ) -> Tuple[DataLoader, Dict[str, int]]:
 
-    # transformer = Compose([
-    #     ToTensor(),
-    #     Normalize((0), (1))
-    # ])
-    transformer = lambda x: (torch.tensor(np.array(x)) / 255).unsqueeze(0)
+    transformer = Compose([
+        ToTensor(),
+        Normalize((0), (1))
+    ])
 
     dataset = TrainTestDataset(
         data_path, image_dir, formulas_path, vocab_path, transformer)
