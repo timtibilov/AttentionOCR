@@ -35,7 +35,8 @@ class TrainTestDataset(Dataset):
         data = np.array(list(zip(*strs))).T
         self.data = pd.DataFrame(data, columns=['image', 'idx'])
 
-        # self.data = self.data[:5]
+        self.data.drop(
+            self.data[self.data.image.apply(self._check_exists)].index, inplace=True)
 
         self.data['idx'] = self.data['idx'].astype(int)
         self.data['image'] = self.data.image.apply(self._load_image)
@@ -44,6 +45,10 @@ class TrainTestDataset(Dataset):
         with open(vocab_path, 'r') as f:
             strs = f.readlines()
         self.vocab = {s.strip(): i for i, s in enumerate(strs)}
+        self.vocab['EOF'] = len(
+            self.vocab) if 'EOF' not in self.vocab else self.vocab['EOF']
+        self.vocab['UNKNOWN'] = len(
+            self.vocab) if 'UNKNOWN' not in self.vocab else self.vocab['UNKNOWN']
         self.vocab_size = len(self.vocab)
         self.transform = transform
 
@@ -73,6 +78,9 @@ class TrainTestDataset(Dataset):
         }
         return item
 
+    def _check_exists(self, img: str) -> bool:
+        return not os.path.exists(os.path.join(self.image_dir, img))
+
     def _load_image(self, img: str) -> Image.Image:
         """ Returns PIL.Image with 'L' convertation mode """
         im_path = os.path.join(self.image_dir, img)
@@ -85,11 +93,11 @@ class TrainTestDataset(Dataset):
         """
         def encode(token):
             return self.vocab.get(token, self.vocab['UNKNOWN'])
-        # sequence = torch.zeros(len(formula), len(self.vocab))
-        tokens_idx = torch.Tensor(list(map(encode, formula)) + [0]).long()
-        # sequence[np.arange(len(formula)), tokens_idx] = 1.0
 
-        return tokens_idx  # sequence
+        tokens_idx = torch.Tensor(
+            list(map(encode, formula)) + [self.vocab['EOF']]).long()
+
+        return tokens_idx
 
     def _upsample_image(self, image: Image.Image) -> Image.Image:
         """
@@ -123,7 +131,6 @@ def get_dataloader(
     image_dir: str,
     formulas_path: str,
     vocab_path: str,
-    device: str,
 ) -> Tuple[DataLoader, Dict[str, int]]:
 
     transformer = Compose([

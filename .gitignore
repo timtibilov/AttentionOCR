@@ -129,6 +129,8 @@ dmypy.json
 .pyre/
 
 # Course project docs
-data/
+*data/
+logs/
 Docs/
 .DS_Store
+*metrics.csv
