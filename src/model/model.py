@@ -2,8 +2,8 @@ import torch
 from torch import nn, Tensor
 from .encoder import Encoder
 from .decoder import Decoder
-from typing import Dict, Union, Optional
 from torch.nn import functional as F
+from typing import Dict, Union, Optional, List
 
 
 class AttentionOCR(nn.Module):
@@ -42,16 +42,17 @@ class AttentionOCR(nn.Module):
         return tokens
 
     @torch.no_grad()
-    def inference(self, x: Tensor) -> Tensor:
+    def inference(self, x: Tensor) -> List[int]:
         self.eval()
         hidden = self.decoder.h0
         seq = self.encoder(x)
-        tokens = torch.Tensor().to(self.device)
-        while tokens.shape[0] < self.max_len:
+        tokens = []
+        while len(tokens) < self.max_len:
             logits, hidden = self.decoder(hidden, seq)
-            if torch.argmax(logits, -1) == self.eof:
+            token = torch.argmax(self.softmax(logits), -1)
+            if token == self.eof:
                 return tokens
-            tokens = torch.cat((tokens, self.softmax(logits)), dim=0)
+            tokens.append(token.detach().cpu().item())
         return tokens
 
     def save(self, path: str):

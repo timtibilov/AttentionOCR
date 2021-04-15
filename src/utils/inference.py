@@ -66,7 +66,6 @@ class ModelManager(object):
 
     def predict(self, img_path: str) -> str:
         img = process_img(img_path, self.__transform)
-        probs = self.__model.inference(img)
-        encoded_tokens = torch.argmax(probs, -1).detach().cpu().numpy()
+        encoded_tokens = self.__model.inference(img)
         tokens = [self.__vocab[t] for t in encoded_tokens]
         return ''.join(tokens)
