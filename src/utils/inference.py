@@ -47,13 +47,13 @@ class ModelManager(object):
         device: Union['cpu', 'cuda'] = 'cpu'
     ):
         if not hasattr(cls, 'instance'):
-            cls.instance = super(ModelManager, cls).__new__(cls)
             cls.__vocab, eof_index = load_vocab(vocab_path)
             cls.__model = AttentionOCR(len(cls.__vocab), device, max_len, eof_index)
             cls.__model.load(model_path)
             cls.__model.to(device)
             cls.__device = device
             cls.__transform = ToTensor()
+            cls.instance = super(ModelManager, cls).__new__(cls)
         return cls.instance
 
     def to(self, device: Union['cpu', 'cuda']):
