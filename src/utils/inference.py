@@ -47,13 +47,13 @@ class ModelManager(object):
         device: Union['cpu', 'cuda'] = 'cpu'
     ):
         if not hasattr(cls, 'instance'):
-            cls.instance = super(ModelManager, cls).__new__(cls)
             cls.__vocab, eof_index = load_vocab(vocab_path)
             cls.__model = AttentionOCR(len(cls.__vocab), device, max_len, eof_index)
             cls.__model.load(model_path)
             cls.__model.to(device)
             cls.__device = device
             cls.__transform = ToTensor()
+            cls.instance = super(ModelManager, cls).__new__(cls)
         return cls.instance
 
     def to(self, device: Union['cpu', 'cuda']):
@@ -66,7 +66,6 @@ class ModelManager(object):
 
     def predict(self, img_path: str) -> str:
         img = process_img(img_path, self.__transform)
-        probs = self.__model.inference(img)
-        encoded_tokens = torch.argmax(probs, -1).detach().cpu().numpy()
+        encoded_tokens = self.__model.inference(img)
         tokens = [self.__vocab[t] for t in encoded_tokens]
         return ''.join(tokens)
