@@ -42,7 +42,7 @@ def index():
 
 
 @app.route('/uploads/<filename>')
-def send_file(filename): 
+def send_file(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
 
