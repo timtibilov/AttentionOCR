@@ -129,10 +129,6 @@ def fit_model(
     return pd.DataFrame(metrics)
 
 
-def test_model():  # TODO: realize validation method
-    pass
-
-
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='cpu')

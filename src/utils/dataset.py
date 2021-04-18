@@ -17,7 +17,8 @@ class TrainTestDataset(Dataset):
         image_dir: str,
         formulas_path: str,
         vocab_path: str,
-        transform: None
+        transform: None,
+        train: bool = False
     ):
         super().__init__()
 
@@ -51,6 +52,7 @@ class TrainTestDataset(Dataset):
             self.vocab) if 'UNKNOWN' not in self.vocab else self.vocab['UNKNOWN']
         self.vocab_size = len(self.vocab)
         self.transform = transform
+        self.train = train
 
     def __len__(self):
         return self.data.shape[0]
@@ -63,7 +65,7 @@ class TrainTestDataset(Dataset):
         seq_len = len(formula) + 1
 
         # Upsampling and transforming image
-        image = self._upsample_image(image)
+        image = self._upsample_image(image) if self.train else image
         if self.transform:
             image = self.transform(image)
 
@@ -110,20 +112,6 @@ class TrainTestDataset(Dataset):
         image = image.resize(new_size, PIL.Image.LANCZOS)
 
         return image
-
-
-def collate(batch, device):
-    images, tokens, seq_len = zip(*batch)
-    max_len = np.max(seq_len)
-    tokens = [torch.cat((t, torch.zeros(max_len - t.shape[0], t.shape[1])))
-              for t in tokens]
-    batch = {
-        'img': torch.tensor(images).to(device),
-        'tokens': torch.tensor(tokens).to(device),
-        'len': seq_len
-    }
-
-    return batch
 
 
 def get_dataloader(

@@ -2,6 +2,7 @@ import torch
 from torch import nn, Tensor
 from .encoder import Encoder
 from .decoder import Decoder
+from .cnn import CNN, ResNetCNN
 from torch.nn import functional as F
 from typing import Dict, Union, Optional, List
 
@@ -13,7 +14,8 @@ class AttentionOCR(nn.Module):
         vocab_size: int,
         device: Union['cpu', 'cuda'] = 'cpu',
         max_len: int = 150,
-        eof_index: Optional[int] = None
+        eof_index: Optional[int] = None,
+        cnn_type: Union[CNN, ResNetCNN] = ResNetCNN,
     ):
 
         super().__init__()
@@ -25,7 +27,7 @@ class AttentionOCR(nn.Module):
             raise ValueError(f'EOF token index must be zero or positive, got {eof_index}')
         self.eof = eof_index
         self.max_len = max_len
-        self.encoder = Encoder([2, 2, 2])
+        self.encoder = Encoder(cnn=cnn_type)
         self.decoder = Decoder(vocab_size, self.encoder.encoding_size,
                                self.encoder.encoding_size, n_layers=2, dropout=0.2)
         self.vocab_size = vocab_size

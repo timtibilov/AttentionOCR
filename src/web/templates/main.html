@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+    <head>
+        <meta chatset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <meta name="author" content="Taimuraz Tibilov">
+
+        <title>Img2LaTeX</title>
+
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+        <style>
+            footer {
+                position: absolute;
+                left: 0;
+                bottom: 0;
+                width: 100%;
+                height: 80px;
+            }
+        </style>
+    </head>
+    <body class="d-flex h-100 text-center">
+        <div class="container">
+            <header class="py-3">
+                <div class="row flex-nowrap justify-content-center align-items-center">
+                    <div class="col-4 text-center">
+                        <h1 class="text-dark">Image 2 LaTeX</h1>
+                    </div>
+                </div>
+                <hr class='my-3'>
+            </header>
+
+            <main class="container">
+                <div class="px-3 p-2 d-flex justify-content-center mb-4">
+                    <form action="/" method="POST" enctype="multipart/form-data">
+                        <input type="file" name="file" class="mb-2 form-control file-selector-button-sm">
+                        <button type="submit" class="mb-2 form-control webkit-file-upload-button-sm">Загрузить</button>
+                    </form>
+                </div>
+                {% if message %}
+                <p class="px-3 p-2 justify-content-center mb-4 --bs-red">Ошибка: {{ message }}</p>
+                {% else %}
+                <img src="{{ url_for('send_file', filename=img) }}" alt="Formula image" class="px-3 p-2 justify-content-center mb-4">
+                <p class="px-3 p-2 justify-content-center mb-4">Вероятная LaTeX формула, предложенная моделью:</p>
+                <p class="border px-4 py-4 p-2 justify-content-center mb-4">{{ formula }}</p>
+                {% endif %}
+            </main>
+
+            <footer class="footer-basic footer">
+                <p class="copyright">Made by <a href="https://github.com/timtibilov">Taimuraz Tibilov</a> © 2021, all rights reserved</p>
+            </footer>
+        </div>
+    </body>
+</html>

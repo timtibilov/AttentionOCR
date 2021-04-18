@@ -39,20 +39,6 @@ class Decoder(nn.Module):
             (n_layers, 1, hidden_size)), requires_grad=True)
         self.dropout = nn.Dropout(p=dropout)
 
-    # def forward(
-    #     self,
-    #     prev_hidden: Tensor,
-    #     encoded_seq: Tensor,
-    #     prev_output: Tensor
-    # ) -> Tuple[Tensor, Tensor, Tensor]:
-
-    #     output, hidden = self.gru(prev_output, prev_hidden)
-    #     context = self.attention(hidden, encoded_seq)
-    #     output = F.tanh(self.output_fc(torch.cat((context, output), dim=-1)))
-    #     logits = self.decode_fc(self.dropout(output))
-
-    #     return logits.squeeze(), output, hidden
-
     def forward(
         self,
         prev_hidden: Tensor,
