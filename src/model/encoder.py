@@ -1,7 +1,7 @@
 import torch
-from .cnn import CNN
+from .cnn import CNN, ResNetCNN
 from torch import nn, Tensor
-from typing import List, Tuple
+from typing import List, Tuple, Union
 from torch.nn import functional as F
 
 
@@ -10,7 +10,7 @@ class Encoder(nn.Module):
     Combination of CNN and GRU together to encode image
     """
 
-    def __init__(self, layers: List[int] = None, hidden_size: int = 128):
+    def __init__(self, cnn: Union[CNN, ResNetCNN], hidden_size: int = 128):
         """
         Parameters:
         layers:      list of size 3 of CNN block numbers on each layer
@@ -22,7 +22,7 @@ class Encoder(nn.Module):
         super().__init__()
 
         self.encoding_size = hidden_size * 2
-        self.cnn = CNN(layers, hidden_size)
+        self.cnn = cnn(output_size=hidden_size)
         self.gru = nn.GRU(hidden_size, hidden_size, bidirectional=True)
 
     def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
@@ -39,6 +39,6 @@ class Encoder(nn.Module):
         x, hidden = self.gru(x)
         # (height, width, hidden_size * 2)
         x = x.permute(1, 0, 2)
-        x = x.contiguous().view(x.shape[0] * x.shape[1], 1, self.encoding_size)
+        x = x.reshape(x.shape[0] * x.shape[1], 1, self.encoding_size)
 
         return x

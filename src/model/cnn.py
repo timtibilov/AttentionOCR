@@ -5,6 +5,7 @@ Some of code was taken from https://pytorch.org/vision/stable/_modules/torchvisi
 import torch
 from torch import Tensor, nn
 from typing import Optional, List
+from torchvision.models import resnet18
 
 
 def conv3x3(input_size: int, output_size: int, stride: int = 1) -> nn.Conv2d:
@@ -52,14 +53,14 @@ class BasicBlock(nn.Module):
         return out
 
 
-class CNN(nn.Module):
+class ResNetCNN(nn.Module):
     """
     Realizes ResNet-like neural network for one-dimentional pictures.
     """
 
     def __init__(
         self,
-        layers: List[int],
+        layers: List[int] = None,
         output_size: int = 128,
     ):
         super().__init__()
@@ -108,3 +109,44 @@ class CNN(nn.Module):
         # (batch_size, output_channels, height, width)
         x = self.downsample(x)
         return x.squeeze(0)  # (output_channels, height, width)
+
+
+class CNN(nn.Module):
+
+    def __init__(self, output_size: int = 128):
+        super().__init__()
+
+        self.input_size = 128
+        self.layer0 = nn.Sequential(
+            nn.Conv2d(1, 128, kernel_size=7, padding=3),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.MaxPool2d((1, 2))
+        )
+        self.layer1 = self._make_layer(256)
+        self.layer2 = self._make_layer(512)
+        self.downsample = nn.Sequential(
+            conv3x3(self.input_size, output_size),
+            nn.BatchNorm2d(output_size),
+            nn.ReLU()
+        )
+
+    def forward(self, x: Tensor) -> Tensor:
+        x = self.layer0(x)
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.downsample(x)
+        return x.squeeze(0)
+
+    def _make_layer(self, output_size: int) -> nn.Sequential:
+        layer = nn.Sequential(
+            conv3x3(self.input_size, output_size),
+            nn.BatchNorm2d(output_size),
+            nn.ReLU(),
+            conv3x3(output_size, output_size),
+            nn.BatchNorm2d(output_size),
+            nn.ReLU(),
+            nn.MaxPool2d(2)
+        )
+        self.input_size = output_size
+        return layer

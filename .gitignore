@@ -133,4 +133,5 @@ dmypy.json
 logs/
 Docs/
 .DS_Store
+src/web/uploads/*
 *metrics.csv

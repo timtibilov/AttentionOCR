@@ -8,6 +8,7 @@ from torch import Tensor
 from loguru import logger
 from torchvision.transforms import ToTensor
 from typing import Union, Dict, Optional, Tuple
+from werkzeug.datastructures import FileStorage
 sys.path.insert(0, f'{os.path.join(os.path.dirname(__file__), "../")}')
 from model.model import AttentionOCR
 
@@ -19,14 +20,18 @@ def load_vocab(vocab_path: str) -> Tuple[Dict[int, str], int]:
     reversed_vocab = {vocab[k]: k for k in vocab}
 
     if 'EOF' not in reversed_vocab:
-        raise ValueError('There are no EOF token in vocabulary')
+        raise ValueError('There is no EOF token in vocabulary')
     eof_index = reversed_vocab['EOF']
 
     return vocab, eof_index
 
 
-def process_img(img_path: str, transform: Optional[ToTensor] = None) -> Tensor:
-    img = Image.open(img_path).convert('L')
+def process_img(
+    img: Union[str, FileStorage],
+    transform: Optional[ToTensor] = None
+) -> Tensor:
+
+    img = Image.open(img).convert('L')
 
     if transform:
         img = transform(img)
@@ -64,8 +69,8 @@ class ModelManager(object):
             logger.exception(
                 f'Tried to move on {device} device, got exception {e}')
 
-    def predict(self, img_path: str) -> str:
-        img = process_img(img_path, self.__transform)
+    def predict(self, img: Union[str, FileStorage]) -> str:
+        img = process_img(img, self.__transform)
         encoded_tokens = self.__model.inference(img)
         tokens = [self.__vocab[t] for t in encoded_tokens]
         return ''.join(tokens)
