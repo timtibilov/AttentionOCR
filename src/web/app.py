@@ -25,20 +25,20 @@ def allowed_file(filename):
 def index():
     if request.method == 'POST':
         if 'file' not in request.files:
-            return render_template('main.html', message='Изображение не найдено')
+            return render_template('index.html', message='Изображение не найдено')
         file = request.files['file']
         if file.filename == '':
-            return render_template('main.html', message='Пустой файл')
+            return render_template('index.html', message='Пустой файл')
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             filepath = os.path.join(UPLOAD_FOLDER, filename)
             file.save(filepath)
             formula = manager.predict(file)
-            return render_template('main.html', img=filename, formula=formula)
+            return render_template('index.html', img=filename, formula=formula)
         else:
-            return render_template('main.html', message='Неподдерживаемый формат файла')
+            return render_template('index.html', message='Неподдерживаемый формат файла')
     else:
-        return render_template('main.html', formula='E = mc^2', img='main.png')
+        return render_template('index.html', formula='E = mc^2', img='main.png')
 
 
 @app.route('/uploads/<filename>')
