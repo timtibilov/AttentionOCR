@@ -116,15 +116,16 @@ class CNN(nn.Module):
     def __init__(self, output_size: int = 128):
         super().__init__()
 
-        self.input_size = 128
+        self.input_size = 64
         self.layer0 = nn.Sequential(
-            nn.Conv2d(1, 128, kernel_size=7, padding=3),
-            nn.BatchNorm2d(128),
+            nn.Conv2d(1, 64, kernel_size=7, padding=3),
+            nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.MaxPool2d((1, 2))
         )
-        self.layer1 = self._make_layer(256)
-        self.layer2 = self._make_layer(512)
+        self.layer1 = self._make_layer(128)
+        self.layer2 = self._make_layer(256)
+        self.layer3 = self._make_layer(512)
         self.downsample = nn.Sequential(
             conv3x3(self.input_size, output_size),
             nn.BatchNorm2d(output_size),
@@ -135,6 +136,7 @@ class CNN(nn.Module):
         x = self.layer0(x)
         x = self.layer1(x)
         x = self.layer2(x)
+        x = self.layer3(x)
         x = self.downsample(x)
         return x.squeeze(0)
 

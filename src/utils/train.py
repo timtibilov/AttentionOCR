@@ -11,6 +11,7 @@ from torch.optim import Adam
 from datetime import datetime as dt
 sys.path.insert(0, f'{os.path.join(os.path.dirname(__file__), "../")}')
 from model.model import AttentionOCR
+from model.cnn import CNN, ResNetCNN
 from torch.utils.data import DataLoader
 from utils.dataset import get_dataloader
 from typing import Dict, Union, List, Optional
@@ -79,7 +80,8 @@ def fit_model(
     device: Union['cpu', 'cuda'] = 'cpu',
     n_epochs: int = 12,
     lr: float = 1e-4,
-    save_dir: Optional[str] = None
+    save_dir: Optional[str] = None,
+    cnn_type: Union[ResNetCNN, CNN] = ResNetCNN
 ) -> pd.DataFrame:
 
     log_file = ''.join(
@@ -103,7 +105,7 @@ def fit_model(
                                 formulas_path=formulas_path,
                                 vocab_path=vocab_path)
     logger.info('Loading model')
-    model = AttentionOCR(len(vocab), device)
+    model = AttentionOCR(len(vocab), device, cnn_type=cnn_type)
     optim = torch.optim.Adam(model.parameters(), lr=lr)
 
     metrics = []
@@ -132,6 +134,7 @@ def fit_model(
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='cpu')
+    parser.add_argument('--cnn', type=str, default='resnet')
     parser.add_argument('--epochs', type=int, default=12)
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--train_path', type=str,
@@ -158,6 +161,8 @@ if __name__ == '__main__':
         args.formulas_path = args.formulas_path + '.norm'
         args.vocab_path = args.vocab_path + '.norm'
 
+    cnn_type = ResNetCNN if args.cnn == 'resnet' else CNN
+
     metrics = fit_model(
         args.train_path,
         args.val_path,
@@ -167,7 +172,8 @@ if __name__ == '__main__':
         args.device,
         args.epochs,
         args.lr,
-        args.save
+        args.save,
+        cnn_type
     )
     logger.info(metrics)
     metrics.to_csv('train_metrics.csv')
