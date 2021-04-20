@@ -11,6 +11,7 @@ from typing import Union, Dict, Optional, Tuple
 from werkzeug.datastructures import FileStorage
 sys.path.insert(0, f'{os.path.join(os.path.dirname(__file__), "../")}')
 from model.model import AttentionOCR
+from model.cnn import CNN, ResNetCNN
 
 
 def load_vocab(vocab_path: str) -> Tuple[Dict[int, str], int]:
@@ -32,6 +33,10 @@ def process_img(
 ) -> Tensor:
 
     img = Image.open(img).convert('L')
+    if img.size[1] > 120:
+        ratio = 120 / img.size[1]
+        new_size = (int(img.size[0] * ratio), int(img.size[1] * ratio))
+        img.resize(new_size, Image.LANCZOS)
 
     if transform:
         img = transform(img)
@@ -49,11 +54,12 @@ class ModelManager(object):
         model_path: str,
         vocab_path: str,
         max_len: int,
-        device: Union['cpu', 'cuda'] = 'cpu'
+        device: Union['cpu', 'cuda'] = 'cpu',
+        cnn_type: Union[ResNetCNN, CNN] = ResNetCNN
     ):
         if not hasattr(cls, 'instance'):
             cls.__vocab, eof_index = load_vocab(vocab_path)
-            cls.__model = AttentionOCR(len(cls.__vocab), device, max_len, eof_index)
+            cls.__model = AttentionOCR(len(cls.__vocab), device, max_len, eof_index, cnn_type)
             cls.__model.load(model_path)
             cls.__model.to(device)
             cls.__device = device
@@ -73,4 +79,4 @@ class ModelManager(object):
         img = process_img(img, self.__transform)
         encoded_tokens = self.__model.inference(img)
         tokens = [self.__vocab[t] for t in encoded_tokens]
-        return ''.join(tokens)
+        return ' '.join(tokens)
