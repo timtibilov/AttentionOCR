@@ -45,14 +45,18 @@
                 <p class="px-3 p-2 justify-content-center mb-4 --bs-red">Ошибка: {{ message }}</p>
                 {% else %}
                 <div>
+                    {% if img %}
                     <img src="{{ url_for('send_file', filename=img) }}" alt="Formula image" class="img px-3 p-2 justify-content-center mb-4">
+                    {% else %}
+                    <img src="../static/main.png" alt="Formula image" class="img px-3 p-2 justify-content-center mb-4">
+                    {% endif %}
                 </div>
                 <p class="px-3 p-2 justify-content-center mb-4">Вероятная LaTeX формула, предложенная моделью:</p>
                 <p class="border px-4 py-4 p-2 justify-content-center mb-4">{{ formula }}</p>
                 {% endif %}
             </main>
 
-            <footer class="footer-basic footer">
+            <footer class="blockquote-footer footer">
                 <p class="copyright">Made by <a href="https://github.com/timtibilov">Taimuraz Tibilov</a> © 2021, all rights reserved</p>
             </footer>
         </div>
