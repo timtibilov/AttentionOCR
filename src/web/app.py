@@ -59,7 +59,7 @@ def parse_args():
     parser.add_argument('--vocab', type=str,
                         default='./data/latex_vocab.txt')
     parser.add_argument('--model', type=str,
-                        default='./params/0.693_04-20')
+                        default='./params/0.745_04-21')
 
     return parser.parse_args()
 

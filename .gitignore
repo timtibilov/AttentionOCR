@@ -134,4 +134,5 @@ logs/
 Docs/
 .DS_Store
 src/web/uploads/*
+demo/
 *metrics.csv
