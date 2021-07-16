@@ -135,4 +135,5 @@ Docs/
 .DS_Store
 src/web/uploads/*
 demo/
+params/
 *metrics.csv
