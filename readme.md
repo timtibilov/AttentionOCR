@@ -4,11 +4,11 @@ This neural network is based on Attention-OCR models. Install python3 and packac
 
 ## Architecture
 
-Model based on [recent work](http://lstm.seas.harvard.edu/latex/) of Harvard University NLP Team.
+The model is based on [recent work](http://lstm.seas.harvard.edu/latex/) by Harvard University NLP Team.
 
 <p align=center><img src='https://i.ibb.co/W6q5k33/network.png' width=200></p>
 
-Architecture based on Attention OCR. Contains CNN layer for feature extracting from image (encoder), and Attention + RNN Seq2Seq layer (decoder)
+The architecture is based on Attention OCR. Contains CNN layer for feature extracting from image (encoder), and Attention + RNN Seq2Seq layer (decoder)
 
 ## Training
 
